@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0c0815">
+<title>ระบบออมเงิน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Kanit:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0c0815;
+    --panel: #1a1225;
+    --panel-2: #221731;
+    --edge: #33253f;
+    --ember: #d9a441;
+    --ember-bright: #f0c264;
+    --amethyst: #7c5cbf;
+    --amethyst-bright: #9b7fd6;
+    --garnet: #a8434a;
+    --garnet-bright: #c65a5f;
+    --parchment: #ede6d9;
+    --parchment-dim: #8f8478;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: var(--ink);
+    background-image:
+      radial-gradient(ellipse 700px 420px at 50% -6%, rgba(124,92,191,0.22), transparent 62%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.014) 0px, rgba(255,255,255,0.014) 1px, transparent 1px, transparent 26px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.014) 0px, rgba(255,255,255,0.014) 1px, transparent 1px, transparent 26px);
+    min-height: 100vh;
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    color: var(--parchment);
+    padding: 28px 16px 70px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { max-width: 440px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 20px; }
+  header h1 { font-family: 'Kanit', sans-serif; font-size: 1.3rem; font-weight: 700; letter-spacing: 0.5px; }
+  header p { color: var(--parchment-dim); font-size: 0.78rem; margin-top: 3px; }
+
+  .vault-wrap { display: flex; justify-content: center; margin: 8px 0 24px; }
+  .vault-dial { position: relative; width: 210px; height: 210px; animation: dialWake 0.7s cubic-bezier(0.2,0.8,0.2,1) both; }
+  .vault-dial svg { width: 100%; height: 100%; overflow: visible; }
+  .dial-ring-outer { fill: none; stroke: var(--edge); stroke-width: 1; }
+  .dial-ring-inner { fill: none; stroke: var(--edge); stroke-width: 1; opacity: 0.5; }
+  .tick { stroke: var(--amethyst); opacity: 0.55; }
+  .tick.major { stroke: var(--ember); opacity: 0.9; stroke-width: 2; }
+  .dial-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 18px; }
+  .dial-label { font-size: 0.72rem; color: var(--parchment-dim); letter-spacing: 0.5px; margin-bottom: 6px; }
+  .dial-value { font-family: 'JetBrains Mono', monospace; font-size: 1.75rem; font-weight: 700; color: var(--ember-bright); text-shadow: 0 0 24px rgba(240,194,100,0.35); line-height: 1.1; word-break: break-word; }
+  @keyframes dialWake { from { opacity: 0; transform: scale(0.88) rotate(-8deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
+
+  .ledger-strip { display: flex; background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+  .ledger-item { flex: 1; padding: 12px 6px; text-align: center; border-left: 1px solid var(--edge); }
+  .ledger-item:first-child { border-left: none; }
+  .ledger-item .l-label { font-size: 0.63rem; color: var(--parchment-dim); letter-spacing: 0.2px; margin-bottom: 5px; line-height: 1.25; }
+  .ledger-item .l-value { font-family: 'JetBrains Mono', monospace; font-size: 0.86rem; font-weight: 600; word-break: break-word; }
+  .l-value.ember { color: var(--ember); }
+  .l-value.garnet { color: var(--garnet-bright); }
+  .l-value.amethyst { color: var(--amethyst-bright); }
+
+  .action-panel { background: var(--panel); border: 1px solid var(--edge); border-radius: 14px; padding: 16px; margin-bottom: 18px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; background: rgba(0,0,0,0.28); padding: 4px; border-radius: 9px; }
+  .tab-btn { flex: 1; padding: 9px; border: none; border-radius: 6px; background: transparent; color: var(--parchment-dim); font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 600; font-size: 0.87rem; cursor: pointer; transition: background 0.2s, color 0.2s; }
+  .tab-btn.active[data-tab="deposit"] { background: linear-gradient(160deg, var(--ember-bright), var(--ember)); color: #241804; }
+  .tab-btn.active[data-tab="withdraw"] { background: linear-gradient(160deg, var(--garnet-bright), var(--garnet)); color: #2a0708; }
+
+  .panel { display: flex; flex-direction: column; gap: 9px; }
+  .panel.hidden { display: none; }
+
+  input[type=number], input[type=text] { width: 100%; padding: 11px 13px; border-radius: 8px; border: 1px solid var(--edge); background: rgba(0,0,0,0.32); color: var(--parchment); font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 0.92rem; outline: none; transition: border-color 0.2s; }
+  input::placeholder { color: var(--parchment-dim); opacity: 0.7; }
+  input:focus { border-color: var(--amethyst-bright); }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  .btn-submit { padding: 12px; border: none; border-radius: 8px; font-family: 'Kanit', sans-serif; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: transform 0.12s; }
+  .btn-submit:active { transform: scale(0.98); }
+  .btn-deposit { background: linear-gradient(160deg, var(--ember-bright), var(--ember)); color: #241804; box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 14px rgba(217,164,65,0.18); }
+  .btn-withdraw { background: linear-gradient(160deg, var(--garnet-bright), var(--garnet)); color: #fbeaea; box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 14px rgba(168,67,74,0.22); }
+
+  .error-msg { color: var(--garnet-bright); font-size: 0.78rem; min-height: 1em; display: none; }
+  .error-msg.show { display: block; }
+
+  .history-section h2 { font-family: 'Kanit', sans-serif; font-size: 0.92rem; margin-bottom: 10px; color: var(--parchment-dim); font-weight: 600; letter-spacing: 0.3px; }
+  .history-row { display: flex; align-items: stretch; background: var(--panel); border: 1px solid var(--edge); border-radius: 9px; margin-bottom: 7px; overflow: hidden; }
+  .history-tab { width: 4px; flex-shrink: 0; }
+  .history-row.deposit .history-tab { background: var(--ember); }
+  .history-row.withdraw .history-tab { background: var(--garnet); }
+  .history-mark { width: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 1rem; }
+  .history-row.deposit .history-mark { color: var(--ember); }
+  .history-row.withdraw .history-mark { color: var(--garnet-bright); }
+  .history-info { flex: 1; min-width: 0; padding: 10px 10px 10px 0; }
+  .history-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .history-amount { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.9rem; }
+  .history-row.deposit .history-amount { color: var(--ember); }
+  .history-row.withdraw .history-amount { color: var(--garnet-bright); }
+  .history-date { font-size: 0.68rem; color: var(--parchment-dim); white-space: nowrap; }
+  .history-reason { font-size: 0.78rem; color: var(--parchment-dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .delete-btn { flex-shrink: 0; width: 34px; border: none; background: transparent; border-left: 1px solid var(--edge); color: var(--parchment-dim); cursor: pointer; font-size: 0.75rem; transition: all 0.2s; }
+  .delete-btn.confirm { background: var(--garnet); color: #fff; width: auto; padding: 0 12px; font-size: 0.7rem; font-weight: 600; }
+
+  .empty { text-align: center; color: var(--parchment-dim); padding: 26px 16px; font-size: 0.86rem; background: var(--panel); border: 1px dashed var(--edge); border-radius: 10px; }
+
+  .reset-btn { display: block; margin: 22px auto 0; background: none; border: none; color: var(--parchment-dim); font-size: 0.74rem; cursor: pointer; text-decoration: underline; opacity: 0.55; }
+  .reset-btn.confirm { color: var(--garnet-bright); opacity: 1; }
+
+  .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 0 60px; gap: 12px; }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--edge); border-top-color: var(--amethyst-bright); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .loading-state p { color: var(--parchment-dim); font-size: 0.82rem; }
+  .hidden { display: none; }
+
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--panel-2); border: 1px solid var(--edge); color: var(--parchment); padding: 11px 18px; border-radius: 9px; font-size: 0.82rem; opacity: 0; transition: all 0.3s; pointer-events: none; box-shadow: 0 12px 32px rgba(0,0,0,0.45); max-width: 88%; text-align: center; z-index: 100; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { border-color: var(--garnet); }
+
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--amethyst-bright); outline-offset: 2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>ระบบออมเงิน</h1>
+    <p>คลังเก็บทรัพย์ส่วนตัวของคุณ</p>
+  </header>
+
+  <div id="loadingState" class="loading-state">
+    <div class="spinner"></div>
+    <p>กำลังเปิดคลัง...</p>
+  </div>
+
+  <div id="mainContent" class="hidden">
+    <div class="vault-wrap">
+      <div class="vault-dial">
+        <svg viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="94" class="dial-ring-outer"/>
+          <circle cx="100" cy="100" r="68" class="dial-ring-inner"/>
+          <g id="dialTicks"></g>
+        </svg>
+        <div class="dial-center">
+          <div class="dial-label">ยอดคงเหลือทั้งหมด</div>
+          <div class="dial-value" id="totalBalance">฿0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ledger-strip">
+      <div class="ledger-item">
+        <div class="l-label">ฝากวันนี้</div>
+        <div class="l-value ember" id="todayDeposit">฿0</div>
+      </div>
+      <div class="ledger-item">
+        <div class="l-label">ถอนสะสม</div>
+        <div class="l-value garnet" id="totalWithdraw">฿0</div>
+      </div>
+      <div class="ledger-item">
+        <div class="l-label" id="monthLabel">เก็บเดือนนี้</div>
+        <div class="l-value amethyst" id="monthNet">฿0</div>
+      </div>
+    </div>
+
+    <div class="action-panel">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="deposit">ฝากเงิน</button>
+        <button class="tab-btn" data-tab="withdraw">ถอนเงิน</button>
+      </div>
+
+      <div class="panel" id="depositPanel">
+        <input type="number" id="depositAmount" placeholder="จำนวนเงิน (บาท)" inputmode="decimal" min="0" step="0.01">
+        <div class="error-msg" id="depositError"></div>
+        <button class="btn-submit btn-deposit" id="depositBtn">ฝากเงิน</button>
+      </div>
+
+      <div class="panel hidden" id="withdrawPanel">
+        <input type="number" id="withdrawAmount" placeholder="จำนวนเงิน (บาท)" inputmode="decimal" min="0" step="0.01">
+        <input type="text" id="withdrawReason" placeholder="เอาไปทำอะไร เช่น ค่าเทอม, ซื้อของ" maxlength="100">
+        <div class="error-msg" id="withdrawError"></div>
+        <button class="btn-submit btn-withdraw" id="withdrawBtn">ถอนเงิน</button>
+      </div>
+    </div>
+
+    <div class="history-section">
+      <h2>ประวัติรายการ</h2>
+      <div id="historyList"></div>
+    </div>
+
+    <button class="reset-btn" id="resetBtn">ล้างข้อมูลทั้งหมด</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'savings-transactions';
+let transactions = [];
+let pendingDeleteId = null;
+let resetPending = false;
+let toastTimeout, deleteTimeout, resetTimeout;
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function formatMoney(n) {
+  const sign = n < 0 ? '\u2212' : '';
+  return sign + '\u0e3f' + Math.abs(n).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function isSameMonth(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function computeStats() {
+  const now = new Date();
+  let balance = 0, todayDeposit = 0, totalWithdraw = 0, monthDeposit = 0, monthWithdraw = 0;
+  transactions.forEach(t => {
+    const d = new Date(t.timestamp);
+    if (t.type === 'deposit') {
+      balance += t.amount;
+      if (isSameDay(d, now)) todayDeposit += t.amount;
+      if (isSameMonth(d, now)) monthDeposit += t.amount;
+    } else {
+      balance -= t.amount;
+      totalWithdraw += t.amount;
+      if (isSameMonth(d, now)) monthWithdraw += t.amount;
+    }
+  });
+  return { balance, todayDeposit, totalWithdraw, monthNet: monthDeposit - monthWithdraw };
+}
+
+function generateDialTicks() {
+  const g = document.getElementById('dialTicks');
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const total = 36;
+  for (let i = 0; i < total; i++) {
+    const angle = (i / total) * 360;
+    const isMajor = i % 3 === 0;
+    const r1 = isMajor ? 82 : 89;
+    const r2 = 94;
+    const rad = (angle - 90) * Math.PI / 180;
+    const line = document.createElementNS(svgNS, 'line');
+    line.setAttribute('x1', (100 + r1 * Math.cos(rad)).toFixed(2));
+    line.setAttribute('y1', (100 + r1 * Math.sin(rad)).toFixed(2));
+    line.setAttribute('x2', (100 + r2 * Math.cos(rad)).toFixed(2));
+    line.setAttribute('y2', (100 + r2 * Math.sin(rad)).toFixed(2));
+    line.setAttribute('class', 'tick ' + (isMajor ? 'major' : 'minor'));
+    g.appendChild(line);
+  }
+}
+
+async function loadData() {
+  try {
+    const result = await window.storage.get(STORAGE_KEY, false);
+    transactions = (result && result.value) ? JSON.parse(result.value) : [];
+  } catch (e) {
+    transactions = [];
+  }
+  generateDialTicks();
+  document.getElementById('loadingState').classList.add('hidden');
+  document.getElementById('mainContent').classList.remove('hidden');
+  const now = new Date();
+  document.getElementById('monthLabel').textContent = 'เก็บเดือน' + now.toLocaleDateString('th-TH', { month: 'short' });
+  render();
+}
+
+async function saveData() {
+  try {
+    const result = await window.storage.set(STORAGE_KEY, JSON.stringify(transactions), false);
+    if (!result) throw new Error('save failed');
+  } catch (e) {
+    showToast('บันทึกข้อมูลไม่สำเร็จ ลองอีกครั้ง', 'error');
+  }
+}
+
+function render() {
+  const stats = computeStats();
+  document.getElementById('totalBalance').textContent = formatMoney(stats.balance);
+  document.getElementById('todayDeposit').textContent = formatMoney(stats.todayDeposit);
+  document.getElementById('totalWithdraw').textContent = formatMoney(stats.totalWithdraw);
+  document.getElementById('monthNet').textContent = formatMoney(stats.monthNet);
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (transactions.length === 0) {
+    list.innerHTML = '<div class="empty">ยังไม่มีรายการ — ฝากเงินก้อนแรกเข้าคลังกันเลย</div>';
+    return;
+  }
+  const sorted = transactions.slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  list.innerHTML = sorted.map(t => {
+    const d = new Date(t.timestamp);
+    const dateStr = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) + ' · ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    const isDeposit = t.type === 'deposit';
+    const isPending = pendingDeleteId === t.id;
+    return '<div class="history-row ' + (isDeposit ? 'deposit' : 'withdraw') + '">' +
+      '<div class="history-tab"></div>' +
+      '<div class="history-mark">' + (isDeposit ? '+' : '\u2212') + '</div>' +
+      '<div class="history-info">' +
+        '<div class="history-top">' +
+          '<span class="history-amount">' + (isDeposit ? '+' : '\u2212') + formatMoney(t.amount) + '</span>' +
+          '<span class="history-date">' + dateStr + '</span>' +
+        '</div>' +
+        ((!isDeposit && t.reason) ? '<div class="history-reason">' + escapeHtml(t.reason) + '</div>' : '') +
+      '</div>' +
+      '<button class="delete-btn ' + (isPending ? 'confirm' : '') + '" data-id="' + t.id + '">' + (isPending ? 'ยืนยัน' : '\u2715') + '</button>' +
+    '</div>';
+  }).join('');
+
+  list.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleDeleteClick(btn.dataset.id));
+  });
+}
+
+function handleDeleteClick(id) {
+  if (pendingDeleteId === id) {
+    deleteTransaction(id);
+  } else {
+    pendingDeleteId = id;
+    renderHistory();
+    clearTimeout(deleteTimeout);
+    deleteTimeout = setTimeout(() => {
+      if (pendingDeleteId === id) { pendingDeleteId = null; renderHistory(); }
+    }, 3000);
+  }
+}
+
+async function deleteTransaction(id) {
+  transactions = transactions.filter(t => t.id !== id);
+  pendingDeleteId = null;
+  await saveData();
+  render();
+  showToast('ลบรายการแล้ว');
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function clearError(id) {
+  const el = document.getElementById(id);
+  el.textContent = '';
+  el.classList.remove('show');
+}
+
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast show' + (type === 'error' ? ' error' : '');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { toast.className = 'toast'; }, 2400);
+}
+
+async function handleDeposit() {
+  const input = document.getElementById('depositAmount');
+  const amount = parseFloat(input.value);
+  if (!amount || amount <= 0) {
+    showError('depositError', 'จำนวนเงินต้องมากกว่า 0');
+    return;
+  }
+  clearError('depositError');
+  transactions.push({ id: generateId(), type: 'deposit', amount, reason: null, timestamp: new Date().toISOString() });
+  input.value = '';
+  await saveData();
+  render();
+  showToast('ฝากเข้าคลังแล้ว ' + formatMoney(amount));
+}
+
+async function handleWithdraw() {
+  const amountInput = document.getElementById('withdrawAmount');
+  const reasonInput = document.getElementById('withdrawReason');
+  const amount = parseFloat(amountInput.value);
+  const reason = reasonInput.value.trim();
+  const stats = computeStats();
+
+  if (!amount || amount <= 0) {
+    showError('withdrawError', 'จำนวนเงินต้องมากกว่า 0');
+    return;
+  }
+  if (amount > stats.balance) {
+    showError('withdrawError', 'ยอดคงเหลือไม่พอ (มี ' + formatMoney(stats.balance) + ')');
+    return;
+  }
+  if (!reason) {
+    showError('withdrawError', 'ระบุเหตุผลก่อนถอนเงิน');
+    return;
+  }
+  clearError('withdrawError');
+  transactions.push({ id: generateId(), type: 'withdraw', amount, reason, timestamp: new Date().toISOString() });
+  amountInput.value = '';
+  reasonInput.value = '';
+  await saveData();
+  render();
+  showToast('ถอนออกจากคลังแล้ว ' + formatMoney(amount));
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('depositPanel').classList.toggle('hidden', tab !== 'deposit');
+    document.getElementById('withdrawPanel').classList.toggle('hidden', tab !== 'withdraw');
+  });
+});
+
+document.getElementById('depositBtn').addEventListener('click', handleDeposit);
+document.getElementById('withdrawBtn').addEventListener('click', handleWithdraw);
+document.getElementById('depositAmount').addEventListener('keypress', e => { if (e.key === 'Enter') handleDeposit(); });
+document.getElementById('withdrawAmount').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('withdrawReason').focus(); });
+document.getElementById('withdrawReason').addEventListener('keypress', e => { if (e.key === 'Enter') handleWithdraw(); });
+
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('resetBtn');
+  if (resetPending) {
+    transactions = [];
+    resetPending = false;
+    btn.textContent = 'ล้างข้อมูลทั้งหมด';
+    btn.classList.remove('confirm');
+    await saveData();
+    render();
+    showToast('ล้างข้อมูลเรียบร้อย');
+  } else {
+    resetPending = true;
+    btn.textContent = 'แตะอีกครั้งเพื่อยืนยัน';
+    btn.classList.add('confirm');
+    clearTimeout(resetTimeout);
+    resetTimeout = setTimeout(() => {
+      resetPending = false;
+      btn.textContent = 'ล้างข้อมูลทั้งหมด';
+      btn.classList.remove('confirm');
+    }, 3000);
+  }
+});
+
+loadData();
+</script>
+</body>
+</html>
