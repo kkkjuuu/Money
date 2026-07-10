@@ -200,7 +200,6 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const STORAGE_KEY = 'savings-transactions';
 let transactions = [];
 let pendingDeleteId = null;
 let resetPending = false;
@@ -268,11 +267,9 @@ function generateDialTicks() {
 
 async function loadData() {
   try {
-    const result = await window.storage.get(STORAGE_KEY, false);
-    transactions = (result && result.value) ? JSON.parse(result.value) : [];
-  } catch (e) {
-    transactions = [];
-  }
+    const res=await fetch('/api/history');
+    transactions=await res.json();
+  } catch(e){transactions=[];}
   generateDialTicks();
   document.getElementById('loadingState').classList.add('hidden');
   document.getElementById('mainContent').classList.remove('hidden');
@@ -281,14 +278,7 @@ async function loadData() {
   render();
 }
 
-async function saveData() {
-  try {
-    const result = await window.storage.set(STORAGE_KEY, JSON.stringify(transactions), false);
-    if (!result) throw new Error('save failed');
-  } catch (e) {
-    showToast('บันทึกข้อมูลไม่สำเร็จ ลองอีกครั้ง', 'error');
-  }
-}
+async function saveData(){}
 
 function render() {
   const stats = computeStats();
